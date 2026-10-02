@@ -262,4 +262,51 @@ export const PORTFOLIO = [
       "https://drive.google.com/file/d/10ktJIxyKiUrpvx0pObxjzY2Cbs_UKW1x/view",
     tech: ["WordPress", "Elementor", "Fluent Forms"],
   },
+  {
+    id: "13",
+    title: "Ecommerce Website",
+    type: "E-commerce",
+    image:
+      "https://i.ibb.co.com/gZCB6hsh/Copy-of-Copy-of-Natural-Mockup-Freebie-Lead-Magnet-Facebook-Post.png",
+    description:
+      "A professional e-commerce website built with react js , node js , Html, Css and Javascript.",
+    view: "https://take-it-easy-client.vercel.app/",
+    video: "",
+    tech: ["React", "Node.js", "HTML", "CSS", "JavaScript"],
+  },
+  {
+    id: "14",
+    title: "Company Website",
+    type: "business",
+    image: "https://i.ibb.co.com/mCWPDp5k/mockup.png",
+    description:
+      "A professional company website built with WordPress, Elementor and Fluent Forms.",
+    view: "https://ayuda.info/",
+    video: "",
+    tech: ["WordPress", "Elementor", "Fluent Forms"],
+  },
+  {
+    id: "15",
+    title: "Company Website",
+    type: "business",
+    image:
+      "https://i.ibb.co.com/sdCWGrZx/Copy-of-Copy-of-Natural-Mockup-Freebie-Lead-Magnet-Facebook-Post-1.png",
+    description:
+      "A professional company website built with WordPress, Elementor and Fluent Forms.",
+    view: "https://naturespark.wasmer.app/",
+    video: "",
+    tech: ["WordPress", "Elementor", "Fluent Forms"],
+  },
+  {
+    id: "16",
+    title: "Portfolio Website",
+    type: "Portfolio",
+    image:
+      "https://i.ibb.co.com/SwJ81vrC/Copy-of-Copy-of-Natural-Mockup-Freebie-Lead-Magnet-Facebook-Post-2.png",
+    description:
+      "A professional portfolio website built with react js , node js , Html, Css and Javascript.",
+    view: "https://asadulsameerportfolio-2167f.web.app/",
+    video: "",
+    tech: ["React", "Node.js", "HTML", "CSS", "JavaScript"],
+  },
 ];

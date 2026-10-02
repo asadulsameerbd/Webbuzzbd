@@ -25,13 +25,17 @@ function App() {
   const [submittedOrder, setSubmittedOrder] = useState(null);
   const [portfolioFilter, setPortfolioFilter] = useState("All");
 
-  const filteredPortfolio = useMemo(
-    () =>
-      portfolioFilter === "All"
-        ? PORTFOLIO
-        : PORTFOLIO.filter((x) => x.type === portfolioFilter),
-    [portfolioFilter],
-  );
+  const filteredPortfolio = useMemo(() => {
+    if (portfolioFilter === "All") {
+      return PORTFOLIO;
+    }
+
+    const selectedFilter = portfolioFilter.trim().toLowerCase();
+
+    return PORTFOLIO.filter(
+      (item) => item.type?.trim().toLowerCase() === selectedFilter,
+    );
+  }, [portfolioFilter]);
 
   const choosePackage = (pkg) => {
     setSelected(pkg);
@@ -500,13 +504,33 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
 
   const [showAll, setShowAll] = useState(false);
 
+  // Filter change হলে আবার প্রথম 9টি project থেকে শুরু করবে
   useEffect(() => {
     setShowAll(false);
   }, [filter]);
 
-  const visibleItems = showAll ? items : items.slice(0, 9);
+  // Safety check
+  const safeItems = Array.isArray(items) ? items : [];
 
-  const hasMore = items.length > 9;
+  // Maximum 9টি project দেখাবে, See More চাপলে সব দেখাবে
+  const visibleItems = showAll ? safeItems : safeItems.slice(0, 9);
+
+  const hasMore = safeItems.length > 9;
+
+  const handleFilterChange = (selectedFilter) => {
+    setFilter(selectedFilter);
+    setShowAll(false);
+  };
+
+  const handleSimilar = (item) => {
+    const itemType = item.type?.trim().toLowerCase();
+
+    const matchedPackage = PACKAGES.find(
+      (pkg) => pkg.name?.trim().toLowerCase() === itemType,
+    );
+
+    onChoose(matchedPackage || PACKAGES[0]);
+  };
 
   return (
     <section className="section portfolio-section" id="portfolio">
@@ -521,62 +545,80 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
           text="A few visual directions for the kind of websites we can build for your business."
         />
 
+        {/* ================================
+            FILTER TABS
+        ================================= */}
         <div className="filter-row">
-          {filters.map((item) => (
-            <button
-              key={item}
-              className={filter === item ? "active" : ""}
-              onClick={() => setFilter(item)}
-            >
-              {item}
-            </button>
-          ))}
+          {filters.map((item) => {
+            const isActive = filter === item;
+
+            return (
+              <button
+                key={item}
+                type="button"
+                className={isActive ? "active" : ""}
+                onClick={() => handleFilterChange(item)}
+              >
+                {item}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="portfolio-grid">
-          {visibleItems.map((item) => (
-            <article className="work-card" key={item.id}>
-              <img src={item.image} alt={item.title} />
+        {/* ================================
+            PORTFOLIO GRID
+        ================================= */}
+        {visibleItems.length > 0 ? (
+          <div className="portfolio-grid">
+            {visibleItems.map((item) => (
+              <article className="work-card" key={item.id}>
+                <img src={item.image} alt={item.title} loading="lazy" />
 
-              <div className="work-overlay">
-                <div>
-                  <small>{item.type}</small>
-                  <h3>{item.title}</h3>
+                <div className="work-overlay">
+                  <div>
+                    <small>{item.type}</small>
+
+                    <h3>{item.title}</h3>
+                  </div>
+
+                  <div className="work-actions">
+                    {/* View Website */}
+                    {item.view && (
+                      <a
+                        href={item.view}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="view-btn"
+                      >
+                        View Website ↗
+                      </a>
+                    )}
+
+                    {/* Get Similar */}
+                    <button type="button" onClick={() => handleSimilar(item)}>
+                      Get Similar →
+                    </button>
+                  </div>
                 </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          /* ================================
+             EMPTY STATE
+          ================================= */
+          <div className="portfolio-empty">
+            <p>No projects available in this category yet.</p>
+          </div>
+        )}
 
-                <div className="work-actions">
-                  {item.view && (
-                    <a
-                      href={item.view}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="view-btn"
-                    >
-                      View Website ↗
-                    </a>
-                  )}
-
-                  <button
-                    onClick={() =>
-                      onChoose(
-                        PACKAGES.find(
-                          (pkg) =>
-                            pkg.name.toLowerCase() === item.type.toLowerCase(),
-                        ) || PACKAGES[0],
-                      )
-                    }
-                  >
-                    Get Similar →
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
+        {/* ================================
+            SEE MORE
+        ================================= */}
         {hasMore && (
           <div className="portfolio-more">
             <button
+              type="button"
               className="see-more-btn"
               onClick={() => setShowAll((prev) => !prev)}
             >
