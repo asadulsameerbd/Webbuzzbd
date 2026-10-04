@@ -94,6 +94,24 @@ export const PACKAGES = [
       "Mobile optimized",
     ],
   },
+  {
+    id: "custom-design",
+    number: "06",
+    name: "Custom Design",
+    tagline: "A fully customized website based on your exact requirements.",
+    price: null,
+    icon: "✦",
+    customPrice: true,
+    features: [
+      "Fully custom website",
+      "Custom pages & sections",
+      "Custom features & functionality",
+      "Responsive design",
+      "Business-focused development",
+      "Requirement-based pricing",
+      "Direct support",
+    ],
+  },
 ];
 
 /* =========================================================

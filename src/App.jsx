@@ -2,7 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { PACKAGES, PORTFOLIO } from "./data/packages";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+/* =========================================================
+   API
+========================================================= */
+
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
+/* =========================================================
+   CONTACT
+========================================================= */
 
 const CONTACT = {
   payment: {
@@ -10,12 +20,62 @@ const CONTACT = {
     Nagad: "01933200699",
     Rocket: "01933200699",
   },
+
   whatsapp: "https://wa.me/8801933200699",
+
   facebook: "https://www.facebook.com/profile.php?id=61576826618253",
+
   telegram: "https://t.me/asadulsameer",
 };
 
-const money = (n) => `৳${Number(n || 0).toLocaleString("en-BD")}`;
+/* =========================================================
+   CUSTOM PACKAGE
+========================================================= */
+
+const CUSTOM_PACKAGE = {
+  id: "custom-design",
+  number: "06",
+  name: "Custom Design",
+  tagline: "A fully customized website based on your exact requirements.",
+  price: null,
+  icon: "✦",
+  customPrice: true,
+
+  features: [
+    "Fully custom website",
+    "Custom pages & sections",
+    "Custom features & functionality",
+    "Responsive design",
+    "Business-focused development",
+    "Requirement-based pricing",
+    "Direct support",
+  ],
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const money = (n) => {
+  if (n === null || n === undefined || n === "") {
+    return "After Discussion";
+  }
+
+  const amount = Number(n);
+
+  if (!Number.isFinite(amount)) {
+    return "After Discussion";
+  }
+
+  return `৳${amount.toLocaleString("en-BD")}`;
+};
+
+const isCustomPackage = (pkg) =>
+  pkg?.id === "custom-design" || pkg?.customPrice === true;
+
+/* =========================================================
+   APP
+========================================================= */
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -24,6 +84,24 @@ function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState(null);
   const [portfolioFilter, setPortfolioFilter] = useState("All");
+
+  /* =========================================================
+     ALL PACKAGES
+  ========================================================= */
+
+  const allPackages = useMemo(() => {
+    const safePackages = Array.isArray(PACKAGES) ? PACKAGES : [];
+
+    const alreadyExists = safePackages.some(
+      (pkg) => pkg.id === CUSTOM_PACKAGE.id,
+    );
+
+    return alreadyExists ? safePackages : [...safePackages, CUSTOM_PACKAGE];
+  }, []);
+
+  /* =========================================================
+     PORTFOLIO FILTER
+  ========================================================= */
 
   const filteredPortfolio = useMemo(() => {
     if (portfolioFilter === "All") {
@@ -37,17 +115,33 @@ function App() {
     );
   }, [portfolioFilter]);
 
+  /* =========================================================
+     CHOOSE PACKAGE
+  ========================================================= */
+
   const choosePackage = (pkg) => {
+    if (!pkg) return;
+
     setSelected(pkg);
+    setCheckoutOpen(false);
     setCartOpen(true);
   };
 
-  const startProject = () => {
-    if (!selected) {
-      document
-        .getElementById("packages")
-        ?.scrollIntoView({ behavior: "smooth" });
+  /* =========================================================
+     START PROJECT
+     
+     IMPORTANT:
+     If no package is selected, Custom Design will be selected
+     automatically and checkout will open directly.
+  ========================================================= */
 
+  const startProject = () => {
+    console.log("Start Project clicked");
+
+    if (!selected) {
+      setSelected(CUSTOM_PACKAGE);
+      setCartOpen(false);
+      setCheckoutOpen(true);
       return;
     }
 
@@ -55,9 +149,14 @@ function App() {
     setCheckoutOpen(true);
   };
 
+  /* =========================================================
+     RESET ORDER
+  ========================================================= */
+
   const resetOrder = () => {
     setSubmittedOrder(null);
     setSelected(null);
+    setCartOpen(false);
     setCheckoutOpen(false);
 
     window.scrollTo({
@@ -65,6 +164,10 @@ function App() {
       behavior: "smooth",
     });
   };
+
+  /* =========================================================
+     SUCCESS SCREEN
+  ========================================================= */
 
   if (submittedOrder) {
     return <SuccessScreen order={submittedOrder} onHome={resetOrder} />;
@@ -76,13 +179,14 @@ function App() {
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
         selected={selected}
-        onCart={() =>
-          selected
-            ? setCartOpen(true)
-            : document.getElementById("packages")?.scrollIntoView({
-                behavior: "smooth",
-              })
-        }
+        onStart={startProject}
+        onCart={() => {
+          if (selected) {
+            setCartOpen(true);
+          } else {
+            startProject();
+          }
+        }}
       />
 
       <main>
@@ -96,7 +200,11 @@ function App() {
 
         <TrustBar />
 
-        <Packages selected={selected} onChoose={choosePackage} />
+        <Packages
+          selected={selected}
+          onChoose={choosePackage}
+          packages={allPackages}
+        />
 
         <Milestone />
 
@@ -105,6 +213,7 @@ function App() {
           setFilter={setPortfolioFilter}
           onChoose={choosePackage}
           items={filteredPortfolio}
+          packages={allPackages}
         />
 
         <WhyUs />
@@ -113,6 +222,7 @@ function App() {
 
         <FAQ />
 
+        {/* IMPORTANT: FinalCTA is now a real component */}
         <FinalCTA onStart={startProject} />
       </main>
 
@@ -142,7 +252,7 @@ function App() {
    NAVBAR
 ========================================================= */
 
-function Navbar({ mobileOpen, setMobileOpen, selected, onCart }) {
+function Navbar({ mobileOpen, setMobileOpen, selected, onStart, onCart }) {
   const links = [
     ["Services", "why"],
     ["Packages", "packages"],
@@ -165,25 +275,27 @@ function Navbar({ mobileOpen, setMobileOpen, selected, onCart }) {
           ))}
 
           <button
+            type="button"
             className="nav-cta"
             onClick={() => {
               setMobileOpen(false);
-
-              document.getElementById("packages")?.scrollIntoView({
-                behavior: "smooth",
-              });
+              onStart();
             }}
           >
             Start a Project <span>↗</span>
           </button>
         </div>
 
-        <button className="cart-button" onClick={onCart}>
+        <button type="button" className="cart-button" onClick={onCart}>
           <span>Project</span>
           <b>{selected ? "1" : "+"}</b>
         </button>
 
-        <button className="menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
+        <button
+          type="button"
+          className="menu-btn"
+          onClick={() => setMobileOpen((prev) => !prev)}
+        >
           {mobileOpen ? "×" : "☰"}
         </button>
       </nav>
@@ -219,7 +331,7 @@ function Hero({ onExplore }) {
           </p>
 
           <div className="hero-actions">
-            <button className="primary-btn" onClick={onExplore}>
+            <button type="button" className="primary-btn" onClick={onExplore}>
               Explore Packages <span>↗</span>
             </button>
 
@@ -279,7 +391,7 @@ function Hero({ onExplore }) {
                   impossible to ignore.
                 </h3>
 
-                <button>Get Started →</button>
+                <button type="button">Get Started →</button>
               </div>
 
               <div className="mock-stats">
@@ -339,7 +451,7 @@ function TrustBar() {
    PACKAGES
 ========================================================= */
 
-function Packages({ selected, onChoose }) {
+function Packages({ selected, onChoose, packages }) {
   return (
     <section className="section packages-section" id="packages">
       <div className="container">
@@ -354,7 +466,7 @@ function Packages({ selected, onChoose }) {
         />
 
         <div className="package-grid">
-          {PACKAGES.map((pkg) => (
+          {packages.map((pkg) => (
             <PackageCard
               key={pkg.id}
               pkg={pkg}
@@ -376,7 +488,13 @@ function Packages({ selected, onChoose }) {
   );
 }
 
+/* =========================================================
+   PACKAGE CARD
+========================================================= */
+
 function PackageCard({ pkg, selected, onChoose }) {
+  const custom = isCustomPackage(pkg);
+
   return (
     <article className={`package-card ${selected ? "selected" : ""}`}>
       <div className="card-top">
@@ -389,12 +507,14 @@ function PackageCard({ pkg, selected, onChoose }) {
 
       <p className="tagline">{pkg.tagline}</p>
 
-      <div className="price-label">Starting from</div>
+      <div className="price-label">{custom ? "PRICING" : "STARTING FROM"}</div>
 
-      <div className="package-price">{money(pkg.price)}</div>
+      <div className={`package-price ${custom ? "custom-price" : ""}`}>
+        {custom ? "After Discussion" : money(pkg.price)}
+      </div>
 
       <ul>
-        {pkg.features.map((feature) => (
+        {pkg.features?.map((feature) => (
           <li key={feature}>
             <span>✓</span>
             {feature}
@@ -402,8 +522,14 @@ function PackageCard({ pkg, selected, onChoose }) {
         ))}
       </ul>
 
-      <button className="card-btn" onClick={() => onChoose(pkg)}>
-        {selected ? "Selected ✓" : "Choose Package"} <span>↗</span>
+      <button type="button" className="card-btn" onClick={() => onChoose(pkg)}>
+        {selected
+          ? "Selected ✓"
+          : custom
+            ? "Discuss Your Project"
+            : "Choose Package"}
+
+        <span>↗</span>
       </button>
     </article>
   );
@@ -492,7 +618,7 @@ function Milestone() {
    PORTFOLIO
 ========================================================= */
 
-function PortfolioSection({ filter, setFilter, onChoose, items }) {
+function PortfolioSection({ filter, setFilter, onChoose, items, packages }) {
   const filters = [
     "All",
     "Business",
@@ -504,15 +630,12 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
 
   const [showAll, setShowAll] = useState(false);
 
-  // Filter change হলে আবার প্রথম 9টি project থেকে শুরু করবে
   useEffect(() => {
     setShowAll(false);
   }, [filter]);
 
-  // Safety check
   const safeItems = Array.isArray(items) ? items : [];
 
-  // Maximum 9টি project দেখাবে, See More চাপলে সব দেখাবে
   const visibleItems = showAll ? safeItems : safeItems.slice(0, 9);
 
   const hasMore = safeItems.length > 9;
@@ -525,11 +648,13 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
   const handleSimilar = (item) => {
     const itemType = item.type?.trim().toLowerCase();
 
-    const matchedPackage = PACKAGES.find(
+    const matchedPackage = packages.find(
       (pkg) => pkg.name?.trim().toLowerCase() === itemType,
     );
 
-    onChoose(matchedPackage || PACKAGES[0]);
+    const fallbackCustom = packages.find((pkg) => pkg.id === "custom-design");
+
+    onChoose(matchedPackage || fallbackCustom || packages[0]);
   };
 
   return (
@@ -545,9 +670,6 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
           text="A few visual directions for the kind of websites we can build for your business."
         />
 
-        {/* ================================
-            FILTER TABS
-        ================================= */}
         <div className="filter-row">
           {filters.map((item) => {
             const isActive = filter === item;
@@ -565,9 +687,6 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
           })}
         </div>
 
-        {/* ================================
-            PORTFOLIO GRID
-        ================================= */}
         {visibleItems.length > 0 ? (
           <div className="portfolio-grid">
             {visibleItems.map((item) => (
@@ -577,12 +696,10 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
                 <div className="work-overlay">
                   <div>
                     <small>{item.type}</small>
-
                     <h3>{item.title}</h3>
                   </div>
 
                   <div className="work-actions">
-                    {/* View Website */}
                     {item.view && (
                       <a
                         href={item.view}
@@ -594,7 +711,6 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
                       </a>
                     )}
 
-                    {/* Get Similar */}
                     <button type="button" onClick={() => handleSimilar(item)}>
                       Get Similar →
                     </button>
@@ -604,17 +720,11 @@ function PortfolioSection({ filter, setFilter, onChoose, items }) {
             ))}
           </div>
         ) : (
-          /* ================================
-             EMPTY STATE
-          ================================= */
           <div className="portfolio-empty">
             <p>No projects available in this category yet.</p>
           </div>
         )}
 
-        {/* ================================
-            SEE MORE
-        ================================= */}
         {hasMore && (
           <div className="portfolio-more">
             <button
@@ -793,7 +903,10 @@ function FAQ() {
               className={`faq-item ${open === index ? "open" : ""}`}
               key={question}
             >
-              <button onClick={() => setOpen(open === index ? -1 : index)}>
+              <button
+                type="button"
+                onClick={() => setOpen(open === index ? -1 : index)}
+              >
                 <span>{question}</span>
                 <b>{open === index ? "−" : "+"}</b>
               </button>
@@ -829,7 +942,7 @@ function FinalCTA({ onStart }) {
 
         <p>Submit your project details. Pay now or discuss payment first.</p>
 
-        <button className="primary-btn" onClick={onStart}>
+        <button type="button" className="primary-btn" onClick={onStart}>
           Start Your Project <span>↗</span>
         </button>
       </div>
@@ -918,6 +1031,8 @@ function SectionHeading({ eyebrow, title, text }) {
 ========================================================= */
 
 function CartDrawer({ packageData, onClose, onContinue }) {
+  const custom = isCustomPackage(packageData);
+
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
       <aside className="cart-drawer" onMouseDown={(e) => e.stopPropagation()}>
@@ -927,7 +1042,9 @@ function CartDrawer({ packageData, onClose, onContinue }) {
             <h2>Project bag</h2>
           </div>
 
-          <button onClick={onClose}>×</button>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="selected-package">
@@ -941,11 +1058,13 @@ function CartDrawer({ packageData, onClose, onContinue }) {
             <p>{packageData.tagline}</p>
           </div>
 
-          <strong>{money(packageData.price)}</strong>
+          <strong>
+            {custom ? "After Discussion" : money(packageData.price)}
+          </strong>
         </div>
 
         <div className="drawer-features">
-          {packageData.features.map((feature) => (
+          {packageData.features?.map((feature) => (
             <div key={feature}>
               <span>✓</span>
               {feature}
@@ -956,31 +1075,48 @@ function CartDrawer({ packageData, onClose, onContinue }) {
         <div className="drawer-total">
           <div>
             <span>Project value</span>
-            <b>{money(packageData.price)}</b>
+
+            <b>{custom ? "After Discussion" : money(packageData.price)}</b>
           </div>
 
-          <div>
-            <span>20% start</span>
-            <b>{money(packageData.price * 0.2)}</b>
-          </div>
+          {!custom && (
+            <>
+              <div>
+                <span>20% start</span>
+
+                <b>{money(Number(packageData.price) * 0.2)}</b>
+              </div>
+
+              <div>
+                <span>30% start</span>
+
+                <b>{money(Number(packageData.price) * 0.3)}</b>
+              </div>
+            </>
+          )}
 
           <div>
-            <span>30% start</span>
-            <b>{money(packageData.price * 0.3)}</b>
-          </div>
+            <span>Payment</span>
 
-          <div>
-            <span>Pay Later</span>
-            <b>Discuss</b>
+            <b>{custom ? "Discuss" : "Pay Later / Discuss"}</b>
           </div>
         </div>
 
         <div className="drawer-policy">
-          No full payment is required upfront. At checkout you can pay 20%, 30%,
-          or choose <b>Pay Later / Discuss Payment</b>.
+          {custom ? (
+            <>
+              Custom projects are priced after reviewing your requirements. Our
+              team will contact you to discuss the scope and final price.
+            </>
+          ) : (
+            <>
+              No full payment is required upfront. At checkout you can pay 20%,
+              30%, or choose <b>Pay Later / Discuss Payment</b>.
+            </>
+          )}
         </div>
 
-        <button className="full-btn" onClick={onContinue}>
+        <button type="button" className="full-btn" onClick={onContinue}>
           Continue to order <span>↗</span>
         </button>
       </aside>
@@ -993,6 +1129,8 @@ function CartDrawer({ packageData, onClose, onContinue }) {
 ========================================================= */
 
 function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
+  const custom = isCustomPackage(packageData);
+
   const [step, setStep] = useState(1);
 
   const [paymentOption, setPaymentOption] = useState("pay_later");
@@ -1014,12 +1152,27 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
     transactionId: "",
   });
 
-  const paymentPercent =
-    paymentOption === "pay_20" ? 20 : paymentOption === "pay_30" ? 30 : 0;
+  const paymentPercent = custom
+    ? 0
+    : paymentOption === "pay_20"
+      ? 20
+      : paymentOption === "pay_30"
+        ? 30
+        : 0;
 
-  const advance = Math.round((packageData.price * paymentPercent) / 100);
+  const numericPrice = Number(packageData.price);
 
-  const remaining = packageData.price - advance;
+  const safeNumericPrice = Number.isFinite(numericPrice) ? numericPrice : 0;
+
+  const advance = custom
+    ? 0
+    : Math.round((safeNumericPrice * paymentPercent) / 100);
+
+  const remaining = custom ? 0 : safeNumericPrice - advance;
+
+  /* =========================================================
+     UPDATE FORM
+  ========================================================= */
 
   const update = (e) => {
     const { name, value } = e.target;
@@ -1030,8 +1183,15 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
     }));
   };
 
+  /* =========================================================
+     NEXT STEP
+  ========================================================= */
+
   const next = () => {
-    if (step === 1 && (!form.name || !form.phone || !form.email)) {
+    if (
+      step === 1 &&
+      (!form.name.trim() || !form.phone.trim() || !form.email.trim())
+    ) {
       return Swal.fire({
         icon: "warning",
         title: "Required information missing",
@@ -1039,7 +1199,7 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
       });
     }
 
-    if (step === 2 && (!form.businessName || !form.requirement)) {
+    if (step === 2 && (!form.businessName.trim() || !form.requirement.trim())) {
       return Swal.fire({
         icon: "warning",
         title: "Tell us about the project",
@@ -1050,7 +1210,16 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
     setStep((prev) => prev + 1);
   };
 
+  /* =========================================================
+     PAYMENT OPTION
+  ========================================================= */
+
   const choosePayment = (value) => {
+    if (custom) {
+      setPaymentOption("pay_later");
+      return;
+    }
+
     setPaymentOption(value);
 
     setForm((prev) => ({
@@ -1070,6 +1239,10 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
       setScreenshot(null);
     }
   };
+
+  /* =========================================================
+     SCREENSHOT
+  ========================================================= */
 
   const handleScreenshot = (e) => {
     const file = e.target.files?.[0];
@@ -1102,6 +1275,10 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
     setScreenshot(file);
   };
 
+  /* =========================================================
+     SUBMIT ORDER
+  ========================================================= */
+
   const submit = async (e) => {
     e?.preventDefault();
 
@@ -1109,7 +1286,10 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
       return;
     }
 
+    /* Custom projects do not require payment proof */
+
     if (
+      !custom &&
       paymentOption !== "pay_later" &&
       !form.transactionId.trim() &&
       !screenshot
@@ -1132,21 +1312,40 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
 
       fd.append("packageId", packageData.id);
 
-      fd.append("paymentOption", paymentOption);
+      fd.append("packageName", packageData.name);
 
-      fd.append("totalAmount", String(packageData.price));
+      fd.append("paymentOption", custom ? "pay_later" : paymentOption);
+
+      fd.append(
+        "totalAmount",
+        custom ? "After Discussion" : String(packageData.price),
+      );
 
       fd.append("milestonePercent", String(paymentPercent));
 
       fd.append("advanceAmount", String(advance));
 
-      fd.append("remainingAmount", String(remaining));
+      fd.append("remainingAmount", custom ? "To Be Agreed" : String(remaining));
 
-      if (screenshot) {
+      fd.append("customPrice", String(custom));
+
+      if (screenshot && !custom) {
         fd.append("screenshot", screenshot);
       }
 
-      const response = await fetch(`${apiUrl}/api/orders`, {
+      /* Prevent //api/orders */
+
+      const cleanApiUrl = String(apiUrl || "").replace(/\/+$/, "");
+
+      if (!cleanApiUrl) {
+        throw new Error("API URL is not configured.");
+      }
+
+      const endpoint = `${cleanApiUrl}/api/orders`;
+
+      console.log("Submitting order to:", endpoint);
+
+      const response = await fetch(endpoint, {
         method: "POST",
         body: fd,
       });
@@ -1158,23 +1357,23 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
       if (contentType.includes("application/json")) {
         data = await response.json();
       } else {
-        const text = await response.text();
+        const responseText = await response.text();
 
-        throw new Error(text || "Server returned an invalid response.");
+        throw new Error(responseText || "Server returned an invalid response.");
       }
 
       if (!response.ok) {
-        throw new Error(data.message || "Order submission failed.");
+        throw new Error(data?.message || "Order submission failed.");
       }
 
-      onSuccess(data.order);
+      onSuccess(data?.order || data);
     } catch (error) {
       console.error("ORDER SUBMISSION ERROR:", error);
 
       Swal.fire({
         icon: "error",
         title: "Could not submit order",
-        text: error.message || "Please check your server URL and deployment.",
+        text: error?.message || "Please check your server URL and deployment.",
       });
     } finally {
       setLoading(false);
@@ -1191,7 +1390,9 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
             <h2>Start your project</h2>
           </div>
 
-          <button onClick={onClose}>×</button>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="steps">
@@ -1214,7 +1415,9 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
 
         <div className="checkout-body">
           <form onSubmit={(e) => e.preventDefault()}>
-            {/* STEP 1 */}
+            {/* =================================================
+                STEP 1
+            ================================================= */}
 
             {step === 1 && (
               <div className="form-step">
@@ -1260,15 +1463,21 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
               </div>
             )}
 
-            {/* STEP 2 */}
+            {/* =================================================
+                STEP 2
+            ================================================= */}
 
             {step === 2 && (
               <div className="form-step">
                 <FormTitle
                   title="Project details"
-                  text={`You selected ${packageData.name} — ${money(
-                    packageData.price,
-                  )}.`}
+                  text={
+                    custom
+                      ? "You selected Custom Design — pricing will be confirmed after discussion."
+                      : `You selected ${packageData.name} — ${money(
+                          packageData.price,
+                        )}.`
+                  }
                 />
 
                 <div className="form-grid">
@@ -1310,66 +1519,97 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
               </div>
             )}
 
-            {/* STEP 3 */}
+            {/* =================================================
+                STEP 3
+            ================================================= */}
 
             {step === 3 && (
               <div className="form-step">
                 <FormTitle
                   title="Choose your payment"
-                  text="You can pay now or submit the order first and discuss payment with us."
+                  text={
+                    custom
+                      ? "Custom Design projects are priced after reviewing your requirements."
+                      : "You can pay now or submit the order first and discuss payment with us."
+                  }
                 />
 
-                <div className="payment-choice-grid three">
-                  <button
-                    type="button"
-                    className={paymentOption === "pay_20" ? "chosen" : ""}
-                    onClick={() => choosePayment("pay_20")}
-                  >
-                    <small>START WITH</small>
+                {/* CUSTOM PAYMENT */}
 
-                    <strong>20%</strong>
+                {custom ? (
+                  <div className="pay-later-note custom-payment-note">
+                    <span>✦</span>
 
-                    <span>{money(packageData.price * 0.2)}</span>
+                    <div>
+                      <b>Custom Project — Price After Discussion</b>
 
-                    <b>
-                      {paymentOption === "pay_20" ? "✓ Selected" : "Pay 20%"}
-                    </b>
-                  </button>
+                      <p>
+                        This project is fully customized based on your
+                        requirements. No payment is required now. Submit your
+                        project details and our team will contact you to discuss
+                        the scope, features and final price.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* NORMAL PAYMENT OPTIONS */
 
-                  <button
-                    type="button"
-                    className={paymentOption === "pay_30" ? "chosen" : ""}
-                    onClick={() => choosePayment("pay_30")}
-                  >
-                    <small>START WITH</small>
+                  <div className="payment-choice-grid three">
+                    <button
+                      type="button"
+                      className={paymentOption === "pay_20" ? "chosen" : ""}
+                      onClick={() => choosePayment("pay_20")}
+                    >
+                      <small>START WITH</small>
 
-                    <strong>30%</strong>
+                      <strong>20%</strong>
 
-                    <span>{money(packageData.price * 0.3)}</span>
+                      <span>{money(Number(packageData.price) * 0.2)}</span>
 
-                    <b>
-                      {paymentOption === "pay_30" ? "✓ Selected" : "Pay 30%"}
-                    </b>
-                  </button>
+                      <b>
+                        {paymentOption === "pay_20" ? "✓ Selected" : "Pay 20%"}
+                      </b>
+                    </button>
 
-                  <button
-                    type="button"
-                    className={`pay-later-choice ${
-                      paymentOption === "pay_later" ? "chosen" : ""
-                    }`}
-                    onClick={() => choosePayment("pay_later")}
-                  >
-                    <small>NO PAYMENT NOW</small>
+                    <button
+                      type="button"
+                      className={paymentOption === "pay_30" ? "chosen" : ""}
+                      onClick={() => choosePayment("pay_30")}
+                    >
+                      <small>START WITH</small>
 
-                    <strong>Pay Later</strong>
+                      <strong>30%</strong>
 
-                    <span>Discuss with us</span>
+                      <span>{money(Number(packageData.price) * 0.3)}</span>
 
-                    <b>
-                      {paymentOption === "pay_later" ? "✓ Selected" : "Choose"}
-                    </b>
-                  </button>
-                </div>
+                      <b>
+                        {paymentOption === "pay_30" ? "✓ Selected" : "Pay 30%"}
+                      </b>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`pay-later-choice ${
+                        paymentOption === "pay_later" ? "chosen" : ""
+                      }`}
+                      onClick={() => choosePayment("pay_later")}
+                    >
+                      <small>NO PAYMENT NOW</small>
+
+                      <strong>Pay Later</strong>
+
+                      <span>Discuss with us</span>
+
+                      <b>
+                        {paymentOption === "pay_later"
+                          ? "✓ Selected"
+                          : "Choose"}
+                      </b>
+                    </button>
+                  </div>
+                )}
+
+                {/* PAYMENT SUMMARY */}
 
                 <div className="payment-summary">
                   <div>
@@ -1380,16 +1620,20 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
                   <div>
                     <span>Total project value</span>
 
-                    <b>{money(packageData.price)}</b>
+                    <b>
+                      {custom ? "After Discussion" : money(packageData.price)}
+                    </b>
                   </div>
 
                   <div>
                     <span>Pay now</span>
 
                     <b>
-                      {paymentOption === "pay_later"
-                        ? "After discussion"
-                        : money(advance)}
+                      {custom
+                        ? "No payment now"
+                        : paymentOption === "pay_later"
+                          ? "After discussion"
+                          : money(advance)}
                     </b>
                   </div>
 
@@ -1397,16 +1641,18 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
                     <span>Remaining</span>
 
                     <b>
-                      {paymentOption === "pay_later"
+                      {custom
                         ? "To be agreed"
-                        : money(remaining)}
+                        : paymentOption === "pay_later"
+                          ? "To be agreed"
+                          : money(remaining)}
                     </b>
                   </div>
                 </div>
 
                 {/* PAYMENT PROOF */}
 
-                {paymentOption !== "pay_later" && (
+                {!custom && paymentOption !== "pay_later" && (
                   <div className="form-grid payment-proof">
                     <label className="field">
                       <span>Payment Method *</span>
@@ -1469,7 +1715,7 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
 
                 {/* PAY LATER */}
 
-                {paymentOption === "pay_later" && (
+                {(custom || paymentOption === "pay_later") && (
                   <div className="pay-later-note">
                     <span>✓</span>
 
@@ -1477,9 +1723,9 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
                       <b>No payment required now</b>
 
                       <p>
-                        Your order details will be sent directly to our
-                        Telegram. We will review your requirements and contact
-                        you to discuss the payment schedule.
+                        {custom
+                          ? "Your custom project details will be sent directly to our team. We will review your requirements and contact you to discuss the final price and payment schedule."
+                          : "Your order details will be sent directly to our Telegram. We will review your requirements and contact you to discuss the payment schedule."}
                       </p>
                     </div>
                   </div>
@@ -1487,7 +1733,9 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
               </div>
             )}
 
-            {/* ACTIONS */}
+            {/* =================================================
+                CHECKOUT ACTIONS
+            ================================================= */}
 
             <div className="checkout-actions">
               {step > 1 ? (
@@ -1515,7 +1763,7 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
                 >
                   {loading
                     ? "Sending..."
-                    : paymentOption === "pay_later"
+                    : custom || paymentOption === "pay_later"
                       ? "Submit & Discuss Payment"
                       : "Place Project Order"}
 
@@ -1525,7 +1773,9 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
             </div>
           </form>
 
-          {/* ORDER SUMMARY */}
+          {/* =================================================
+              ORDER SUMMARY
+          ================================================= */}
 
           <aside className="checkout-summary">
             <small>YOUR ORDER</small>
@@ -1534,11 +1784,13 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
 
             <p>{packageData.tagline}</p>
 
-            <div className="summary-price">{money(packageData.price)}</div>
+            <div className="summary-price">
+              {custom ? "After Discussion" : money(packageData.price)}
+            </div>
 
             <div className="summary-rule" />
 
-            {packageData.features.slice(0, 5).map((feature) => (
+            {packageData.features?.slice(0, 5).map((feature) => (
               <div className="summary-feature" key={feature}>
                 <span>✓</span>
                 {feature}
@@ -1549,9 +1801,11 @@ function CheckoutModal({ packageData, apiUrl, onClose, onSuccess }) {
               <span>Payment</span>
 
               <strong>
-                {paymentOption === "pay_later"
+                {custom
                   ? "Discuss first"
-                  : `${paymentPercent}% to start`}
+                  : paymentOption === "pay_later"
+                    ? "Discuss first"
+                    : `${paymentPercent}% to start`}
               </strong>
             </div>
           </aside>
@@ -1618,6 +1872,12 @@ function Field({
 ========================================================= */
 
 function SuccessScreen({ order, onHome }) {
+  const custom =
+    order?.customPrice === true ||
+    order?.customPrice === "true" ||
+    order?.packageId === "custom-design" ||
+    order?.totalAmount === "After Discussion";
+
   return (
     <div className="success-page">
       <div className="success-glow" />
@@ -1643,29 +1903,31 @@ function SuccessScreen({ order, onHome }) {
         <div className="order-id">
           <small>ORDER ID</small>
 
-          <strong>{order.orderId}</strong>
+          <strong>{order?.orderId || "Pending"}</strong>
         </div>
 
         <div className="success-details">
           <div>
             <span>Package</span>
 
-            <b>{order.packageName}</b>
+            <b>{order?.packageName || "Custom Design"}</b>
           </div>
 
           <div>
             <span>Project value</span>
 
-            <b>{money(order.totalAmount)}</b>
+            <b>{custom ? "After Discussion" : money(order?.totalAmount)}</b>
           </div>
 
           <div>
             <span>Payment</span>
 
             <b>
-              {order.paymentOption === "pay_later"
+              {custom || order?.paymentOption === "pay_later"
                 ? "Pay Later / Discuss"
-                : `${money(order.advanceAmount)} (${order.milestonePercent}%)`}
+                : `${money(order?.advanceAmount)} (${
+                    order?.milestonePercent
+                  }%)`}
             </b>
           </div>
 
@@ -1676,7 +1938,7 @@ function SuccessScreen({ order, onHome }) {
           </div>
         </div>
 
-        {order.paymentScreenshotUrl && (
+        {order?.paymentScreenshotUrl && (
           <div className="success-proof">
             <span>Payment Screenshot</span>
 
@@ -1700,7 +1962,7 @@ function SuccessScreen({ order, onHome }) {
             WhatsApp us
           </a>
 
-          <button className="primary-btn" onClick={onHome}>
+          <button type="button" className="primary-btn" onClick={onHome}>
             Back to home ↗
           </button>
         </div>
