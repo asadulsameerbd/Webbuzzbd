@@ -1404,6 +1404,10 @@ a {
   .hero {
     padding-top: 70px;
   }
+  .brand img {
+    width: 110px;
+    padding: 15px 20px;
+  }
   .hero-visual {
     min-height: 470px;
   }
@@ -1440,7 +1444,8 @@ a {
     height: 70px;
   }
   .brand img {
-    width: 125px;
+    width: 100px;
+    padding: 20px;
   }
   .nav-links {
     position: absolute;

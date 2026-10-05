@@ -138,6 +138,13 @@ function App() {
   const startProject = () => {
     console.log("Start Project clicked");
 
+    // Tablet + Desktop (768px and above) -> WhatsApp
+    // Mobile (<768px) -> keep the existing checkout flow
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
+      window.location.href = CONTACT.whatsapp;
+      return;
+    }
+
     if (!selected) {
       setSelected(CUSTOM_PACKAGE);
       setCartOpen(false);
@@ -924,7 +931,9 @@ function FAQ() {
    FINAL CTA
 ========================================================= */
 
-function FinalCTA({ onStart }) {
+function FinalCTA() {
+  const whatsappUrl = "https://wa.me/8801933200699";
+
   return (
     <section className="final-cta">
       <div className="container">
@@ -942,9 +951,23 @@ function FinalCTA({ onStart }) {
 
         <p>Submit your project details. Pay now or discuss payment first.</p>
 
-        <button type="button" className="primary-btn" onClick={onStart}>
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="primary-btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            cursor: "pointer",
+            position: "relative",
+            zIndex: 10,
+          }}
+        >
           Start Your Project <span>↗</span>
-        </button>
+        </a>
       </div>
     </section>
   );
